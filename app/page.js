@@ -40,8 +40,11 @@ const EXPERIENCES = [
 
 const TESTIMONIALS = [
   { name: 'Sophie L.', country: '🇫🇷 France', stars: 5, text: 'Absolute dream place. The surf lessons were amazing and the Ocean Suite was stunning. Already planning my return trip!' },
-  { name: 'Tom R.', country: '🇬🇧 UK', stars: 5, text: 'Best surf trip I\'ve ever had. The team is so welcoming, the food is incredible, and the waves are perfect every day.' },
-  { name: 'Lena K.', country: '🇩🇪 Germany', stars: 5, text: 'OCEVIA exceeded every expectation. The villa is a total luxury, and the surf trips to secret spots were unforgettable.' },
+  { name: 'Tom R.', country: '🇬🇧 UK', stars: 5, text: "Best surf trip I've ever had. The team is so welcoming, the food is incredible, and the waves are perfect every day." },
+  { name: 'Lena K.', country: '🇩🇪 Germany', stars: 5, text: 'OCEVIA exceeded every expectation. The villa is total luxury, and the surf trips to secret spots were unforgettable.' },
+  { name: 'Carlos M.', country: '🇪🇸 Spain', stars: 5, text: 'Came for a week, stayed for three. The vibe here is unmatched — incredible waves, great people, and the best tagine of my life.' },
+  { name: 'Emma P.', country: '🇳🇱 Netherlands', stars: 5, text: 'Perfect mix of adventure and relaxation. The yoga deck at sunset is something I will never forget. Highly recommend the Villa!' },
+  { name: 'Jake W.', country: '🇦🇺 Australia', stars: 5, text: 'Taghazout is world-class and OCEVIA is the best base for it. The sunrise sessions alone are worth the trip.' },
 ];
 
 const GALLERY = [
@@ -57,33 +60,100 @@ const FAQ_ITEMS = [
   { q: 'When is the best time to surf in Taghazout?', a: 'October to April brings the biggest Atlantic swells. May to September is perfect for beginners with smaller, consistent waves and warm weather.' },
   { q: 'Are surf lessons included in the room price?', a: 'Surf lessons are included in the Ocean Suite and Villa packages. Surf Loft guests can add lessons for €30/day.' },
   { q: 'What is the check-in and check-out time?', a: 'Check-in is from 2pm and check-out by 11am. Early check-in and late check-out are available on request, subject to availability.' },
-  { q: 'Do I need surfing experience to come?', a: 'Not at all! We welcome complete beginners. Our instructors will have you standing on a board on your first day.' },
+  { q: 'Do I need surfing experience to come?', a: "Not at all! We welcome complete beginners. Our instructors will have you standing on a board on your first day." },
   { q: 'How do I get from Agadir airport to OCEVIA?', a: 'We offer complimentary airport transfers from Agadir Al Massira Airport (AGA). Just let us know your flight details when booking.' },
+  { q: 'Is there WiFi at the surf house?', a: 'Yes, we have high-speed WiFi throughout — perfect for digital nomads who want to work between surf sessions.' },
 ];
 
+const SURF_SPOTS = [
+  { name: 'Hash Point', level: 'Advanced', dist: '2 min walk', desc: 'World-famous right-hand point break. Best Oct–Apr.' },
+  { name: 'Anchor Point', level: 'Expert', dist: '5 min drive', desc: 'Morocco\'s most iconic wave. Long, powerful rights.' },
+  { name: 'Panoramas', level: 'Beginner', dist: '8 min drive', desc: 'Gentle beach break. Perfect for learning to surf.' },
+];
+
+function MiniCalendar({ bookedDates, onSelect, selected }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = viewDate.toLocaleString('en', { month: 'long', year: 'numeric' });
+
+  const cells = [];
+  for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  function isoDate(d) {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  return (
+    <div className="mini-cal">
+      <div className="cal-nav">
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))}>‹</button>
+        <span>{monthName}</span>
+        <button onClick={() => setViewDate(new Date(year, month + 1, 1))}>›</button>
+      </div>
+      <div className="cal-grid">
+        {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => <div key={d} className="cal-head">{d}</div>)}
+        {cells.map((d, i) => {
+          if (!d) return <div key={`e-${i}`} />;
+          const iso = isoDate(d);
+          const isBooked = bookedDates.includes(iso);
+          const isPast = new Date(iso) < today;
+          const isSelected = selected === iso;
+          return (
+            <button
+              key={iso}
+              className={`cal-day${isBooked ? ' booked' : ''}${isPast ? ' past' : ''}${isSelected ? ' selected' : ''}`}
+              disabled={isBooked || isPast}
+              onClick={() => onSelect(iso)}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+      <div className="cal-legend">
+        <span><span className="dot dot-free" />Available</span>
+        <span><span className="dot dot-booked" />Booked</span>
+        {selected && <span><span className="dot dot-sel" />Selected</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
-  const [form, setForm] = useState({ name: '', email: '', room: 'Surf Loft', days: '', checkin: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', room: 'Surf Loft', days: '', checkin: '' });
   const [bookingState, setBookingState] = useState({ msg: '', type: '' });
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ count: 0, revenue: 0, bookings: [] });
+  const [bookedDates, setBookedDates] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Hey! 👋 I'm the OCEVIA assistant. Ask me about rooms, surf lessons, or anything else!" }
+    { role: 'ai', text: "Hey! 👋 I'm the OCEVIA assistant. Ask me about rooms, surf lessons, location or anything!" }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [faqOpen, setFaqOpen] = useState(null);
   const [navScrolled, setNavScrolled] = useState(false);
+  const [activeTab, setActiveTab] = useState('form');
   const messagesEndRef = useRef(null);
 
   const selectedRoom = ROOMS.find(r => r.name === form.room);
   const estimatedPrice = form.days && selectedRoom ? Number(form.days) * selectedRoom.price : 0;
 
-  useEffect(() => { loadStats(); }, []);
   useEffect(() => {
-    const onScroll = () => setNavScrolled(window.scrollY > 60);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    loadStats();
+    fetch('/api/availability').then(r => r.json()).then(d => setBookedDates(d.bookedDates || []));
+  }, []);
+  useEffect(() => {
+    const fn = () => setNavScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
   }, []);
   useEffect(() => {
     if (chatOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,7 +170,7 @@ export default function Home() {
   async function handleBook(e) {
     e.preventDefault();
     if (!form.name || !form.email || !form.days) {
-      setBookingState({ msg: 'Please fill in all fields.', type: 'error' });
+      setBookingState({ msg: 'Please fill in name, email and number of nights.', type: 'error' });
       return;
     }
     setLoading(true);
@@ -113,9 +183,10 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.success) {
-        setBookingState({ msg: `✔ Booking confirmed! Total: €${estimatedPrice}. We'll reach out within 24 hours.`, type: 'success' });
-        setForm({ name: '', email: '', room: 'Surf Loft', days: '', checkin: '' });
+        setBookingState({ msg: `✔ Booking confirmed! Total: €${estimatedPrice}. You'll hear from us within 24h.`, type: 'success' });
+        setForm({ name: '', email: '', phone: '', room: 'Surf Loft', days: '', checkin: '' });
         loadStats();
+        fetch('/api/availability').then(r => r.json()).then(d => setBookedDates(d.bookedDates || []));
       } else {
         setBookingState({ msg: 'Booking failed. Please try again.', type: 'error' });
       }
@@ -148,17 +219,18 @@ export default function Home() {
   return (
     <>
       {/* ── NAV ── */}
-      <nav style={{ background: navScrolled ? 'rgba(10,10,10,0.95)' : 'rgba(10,10,10,0.4)', transition: 'background 0.3s' }}>
+      <nav style={{ background: navScrolled ? 'rgba(10,10,15,0.97)' : 'rgba(10,10,15,0.3)', transition: 'background 0.3s' }}>
         <div className="nav-logo">🌊 OCEVIA</div>
         <div className="nav-links">
           <a href="#about">About</a>
           <a href="#rooms">Rooms</a>
           <a href="#experiences">Experiences</a>
           <a href="#gallery">Gallery</a>
+          <a href="#spots">Surf Spots</a>
           <a href="#booking" className="nav-cta">Book Now</a>
         </div>
         <a href="https://wa.me/212672978539" target="_blank" rel="noopener noreferrer" className="whatsapp-nav">
-          <span>📱</span> WhatsApp
+          📱 WhatsApp
         </a>
       </nav>
 
@@ -167,7 +239,7 @@ export default function Home() {
         <div className="hero-content">
           <div className="hero-badge">Taghazout · Morocco · Atlantic Coast</div>
           <h1>Surf.<br />Rest.<br />Repeat.</h1>
-          <p>Where the ocean becomes your home. World-class waves, authentic Moroccan hospitality, and unforgettable sunsets.</p>
+          <p>Where the ocean becomes your home. World-class waves, authentic Moroccan hospitality, unforgettable sunsets.</p>
           <div className="hero-btns">
             <a href="#booking" className="btn btn-primary">Book Your Stay</a>
             <a href="#rooms" className="btn btn-outline">Explore Rooms</a>
@@ -180,6 +252,8 @@ export default function Home() {
           <div className="hero-stat"><span>4.9★</span>Average Rating</div>
           <div className="hero-stat-divider" />
           <div className="hero-stat"><span>3</span>Surf Spots</div>
+          <div className="hero-stat-divider" />
+          <div className="hero-stat"><span>€90</span>From / night</div>
         </div>
       </div>
 
@@ -200,6 +274,8 @@ export default function Home() {
               <span className="tag">🥘 Moroccan Cuisine</span>
               <span className="tag">🌅 Ocean Views</span>
               <span className="tag">🚐 Surf Transfers</span>
+              <span className="tag">📶 Fast WiFi</span>
+              <span className="tag">✈️ Airport Pickup</span>
             </div>
           </div>
         </div>
@@ -225,7 +301,10 @@ export default function Home() {
                 </ul>
                 <div className="room-footer">
                   <div className="room-price">€{room.price}<span>/night</span></div>
-                  <a href="#booking" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.85rem' }}>Book</a>
+                  <a href="#booking" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.85rem' }}
+                    onClick={() => setForm(f => ({ ...f, room: room.name }))}>
+                    Book
+                  </a>
                 </div>
               </div>
             </div>
@@ -249,8 +328,47 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── SURF SPOTS ── */}
+      <section id="spots" style={{ background: '#080b10' }}>
+        <div className="section-label">Nearby Breaks</div>
+        <h2 className="section-title">World-Class Surf Spots</h2>
+        <p className="section-sub">OCEVIA sits at the heart of Morocco's surf coast — 3 legendary breaks on your doorstep.</p>
+        <div className="spots-grid">
+          {SURF_SPOTS.map(s => (
+            <div className="spot-card" key={s.name}>
+              <div className="spot-header">
+                <div>
+                  <div className="spot-name">{s.name}</div>
+                  <div className="spot-dist">📍 {s.dist}</div>
+                </div>
+                <div className={`spot-level level-${s.level.toLowerCase()}`}>{s.level}</div>
+              </div>
+              <div className="spot-desc">{s.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* MAP EMBED */}
+        <div className="map-wrap">
+          <div className="section-label" style={{ marginBottom: '16px' }}>Find Us</div>
+          <h3 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '1.4rem', fontWeight: 800 }}>Taghazout, Morocco</h3>
+          <div className="map-container">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3438.9!2d-9.7107!3d30.5433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xdb3b6e9f8a8f0c1%3A0x1234!2sTaghazout%2C%20Morocco!5e0!3m2!1sen!2s!4v1"
+              width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade" title="OCEVIA Location"
+            />
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <a href="https://maps.google.com/?q=Taghazout,Morocco" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ fontSize: '0.88rem', padding: '10px 22px' }}>
+              Open in Google Maps ↗
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ── GALLERY ── */}
-      <section id="gallery" style={{ background: '#080b10', paddingBottom: '80px' }}>
+      <section id="gallery">
         <div className="section-label">Gallery</div>
         <h2 className="section-title">Life at OCEVIA</h2>
         <p className="section-sub">Waves, sunsets, and smiles — every day at the surf house.</p>
@@ -261,6 +379,11 @@ export default function Home() {
             </div>
           ))}
         </div>
+        <div style={{ textAlign: 'center', marginTop: '32px' }}>
+          <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="ig-btn">
+            📸 Follow us on Instagram @oceviasurfhouse
+          </a>
+        </div>
       </section>
 
       {/* ── BOOKING ── */}
@@ -269,55 +392,89 @@ export default function Home() {
           <div className="booking-info">
             <div className="section-label">Reservations</div>
             <h2 className="section-title" style={{ textAlign: 'left' }}>Book Your Stay</h2>
-            <p style={{ color: 'var(--muted)', marginBottom: '32px' }}>Fill in the form and we'll confirm within 24 hours. Or reach us instantly on WhatsApp.</p>
+            <p style={{ color: 'var(--muted)', marginBottom: '28px', lineHeight: 1.7 }}>Fill in the form and we'll confirm within 24 hours — or reach us instantly on WhatsApp.</p>
             <div className="booking-perks">
               <div className="perk">✔ Free cancellation 48h before arrival</div>
-              <div className="perk">✔ Complimentary airport transfer</div>
+              <div className="perk">✔ Complimentary airport transfer from Agadir</div>
               <div className="perk">✔ Breakfast included in all rooms</div>
               <div className="perk">✔ Surf gear storage & rinse station</div>
+              <div className="perk">✔ Email confirmation sent instantly</div>
             </div>
             <a href="https://wa.me/212672978539" target="_blank" rel="noopener noreferrer" className="wa-btn">
               📱 Book on WhatsApp — +212 672 978 539
             </a>
           </div>
-          <form className="booking-card" onSubmit={handleBook}>
-            <div className="form-group">
-              <label>Full Name</label>
-              <input placeholder="Your name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+
+          <div className="booking-card">
+            <div className="booking-tabs">
+              <button className={activeTab === 'form' ? 'tab active' : 'tab'} onClick={() => setActiveTab('form')}>📋 Details</button>
+              <button className={activeTab === 'cal' ? 'tab active' : 'tab'} onClick={() => setActiveTab('cal')}>📅 Availability</button>
             </div>
-            <div className="form-group">
-              <label>Email Address</label>
-              <input type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Room Type</label>
-                <select value={form.room} onChange={e => setForm({ ...form, room: e.target.value })}>
-                  {ROOMS.map(r => <option key={r.name} value={r.name}>{r.name} — €{r.price}/night</option>)}
-                </select>
+
+            {activeTab === 'cal' ? (
+              <div>
+                <p style={{ color: 'var(--muted)', fontSize: '0.88rem', marginBottom: '16px', textAlign: 'center' }}>
+                  Select your arrival date — red dates are already booked.
+                </p>
+                <MiniCalendar
+                  bookedDates={bookedDates}
+                  selected={form.checkin}
+                  onSelect={iso => { setForm(f => ({ ...f, checkin: iso })); setActiveTab('form'); }}
+                />
               </div>
-              <div className="form-group">
-                <label>Nights</label>
-                <input type="number" min="1" placeholder="7" value={form.days} onChange={e => setForm({ ...form, days: e.target.value })} required />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Arrival Date</label>
-              <input type="date" value={form.checkin} onChange={e => setForm({ ...form, checkin: e.target.value })} />
-            </div>
-            {estimatedPrice > 0 && (
-              <div className="price-estimate">
-                <span>Estimated Total</span>
-                <span className="price-big">€{estimatedPrice}</span>
-              </div>
+            ) : (
+              <form onSubmit={handleBook}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Full Name</label>
+                    <input placeholder="Your name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>WhatsApp / Phone (optional)</label>
+                  <input placeholder="+1 234 567 890" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Room Type</label>
+                    <select value={form.room} onChange={e => setForm({ ...form, room: e.target.value })}>
+                      {ROOMS.map(r => <option key={r.name} value={r.name}>{r.name} — €{r.price}/night</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Nights</label>
+                    <input type="number" min="1" placeholder="7" value={form.days} onChange={e => setForm({ ...form, days: e.target.value })} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>
+                    Arrival Date
+                    <button type="button" className="cal-link" onClick={() => setActiveTab('cal')}>📅 Check availability</button>
+                  </label>
+                  <input type="date" value={form.checkin} min={new Date().toISOString().split('T')[0]} onChange={e => setForm({ ...form, checkin: e.target.value })} />
+                </div>
+                {estimatedPrice > 0 && (
+                  <div className="price-estimate">
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Estimated Total</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>{form.days} nights × €{selectedRoom?.price}</div>
+                    </div>
+                    <div className="price-big">€{estimatedPrice}</div>
+                  </div>
+                )}
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', borderRadius: '12px', padding: '16px', fontSize: '1rem' }} disabled={loading}>
+                  {loading ? 'Confirming…' : 'Confirm Booking →'}
+                </button>
+                {bookingState.msg && (
+                  <div className={`booking-result ${bookingState.type}`}>{bookingState.msg}</div>
+                )}
+              </form>
             )}
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', borderRadius: '12px', padding: '16px' }} disabled={loading}>
-              {loading ? 'Confirming…' : 'Confirm Booking →'}
-            </button>
-            {bookingState.msg && (
-              <div className={`booking-result ${bookingState.type}`}>{bookingState.msg}</div>
-            )}
-          </form>
+          </div>
         </div>
       </section>
 
@@ -385,23 +542,19 @@ export default function Home() {
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Room</th>
-                  <th>Nights</th>
-                  <th>Total</th>
-                  <th>Date</th>
+                  <th>Name</th><th>Email</th><th>Room</th><th>Nights</th><th>Arrival</th><th>Total</th><th>Booked</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.bookings.map(b => (
                   <tr key={b.id}>
-                    <td>{b.name}</td>
+                    <td style={{ fontWeight: 700 }}>{b.name}</td>
                     <td style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{b.email}</td>
                     <td>{b.room}</td>
                     <td>{b.days}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{b.checkin || '—'}</td>
                     <td style={{ color: 'var(--blue)', fontWeight: 700 }}>€{b.price}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{new Date(b.created_at).toLocaleDateString()}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{new Date(b.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -412,12 +565,52 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── CONTACT ── */}
+      <section id="contact">
+        <div className="section-label">Get In Touch</div>
+        <h2 className="section-title">Contact Us</h2>
+        <p className="section-sub">We're always happy to answer questions and help you plan the perfect surf trip.</p>
+        <div className="contact-grid">
+          <a href="https://wa.me/212672978539" target="_blank" rel="noopener noreferrer" className="contact-card">
+            <div className="contact-icon" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}>📱</div>
+            <div className="contact-label">WhatsApp</div>
+            <div className="contact-val">+212 672 978 539</div>
+            <div className="contact-hint">Fastest reply · usually &lt; 1 hour</div>
+          </a>
+          <a href="mailto:info@ocevia.ma" className="contact-card">
+            <div className="contact-icon" style={{ background: 'rgba(30,144,255,0.1)', color: 'var(--blue)' }}>✉️</div>
+            <div className="contact-label">Email</div>
+            <div className="contact-val">info@ocevia.ma</div>
+            <div className="contact-hint">Reply within 24 hours</div>
+          </a>
+          <a href="https://maps.google.com/?q=Taghazout,Morocco" target="_blank" rel="noopener noreferrer" className="contact-card">
+            <div className="contact-icon" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>📍</div>
+            <div className="contact-label">Location</div>
+            <div className="contact-val">Taghazout, Morocco</div>
+            <div className="contact-hint">30 min from Agadir Airport</div>
+          </a>
+          <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="contact-card">
+            <div className="contact-icon" style={{ background: 'rgba(236,72,153,0.1)', color: '#ec4899' }}>📸</div>
+            <div className="contact-label">Instagram</div>
+            <div className="contact-val">@oceviasurfhouse</div>
+            <div className="contact-hint">Daily surf & lifestyle content</div>
+          </a>
+        </div>
+      </section>
+
       {/* ── FOOTER ── */}
       <footer>
         <div className="footer-top">
           <div className="footer-brand">
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>🌊 OCEVIA</div>
-            <p style={{ color: 'var(--muted)', fontSize: '0.9rem', maxWidth: '260px' }}>The ultimate surf house experience on Morocco's Atlantic coast.</p>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '10px' }}>🌊 OCEVIA</div>
+            <p style={{ color: 'var(--muted)', fontSize: '0.88rem', maxWidth: '240px', lineHeight: 1.7 }}>
+              The ultimate surf house experience on Morocco's Atlantic coast. Taghazout, Morocco.
+            </p>
+            <div className="social-links">
+              <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer">📸</a>
+              <a href="https://wa.me/212672978539" target="_blank" rel="noopener noreferrer">📱</a>
+              <a href="mailto:info@ocevia.ma">✉️</a>
+            </div>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">Navigate</div>
@@ -425,18 +618,20 @@ export default function Home() {
             <a href="#rooms">Rooms</a>
             <a href="#experiences">Experiences</a>
             <a href="#gallery">Gallery</a>
+            <a href="#spots">Surf Spots</a>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">Book</div>
             <a href="#booking">Reserve a Room</a>
             <a href="#faq">FAQ</a>
-            <a href="https://wa.me/212672978539" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <a href="https://wa.me/212672978539" target="_blank" rel="noopener noreferrer">WhatsApp Booking</a>
+            <a href="#dashboard">Dashboard</a>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">Contact</div>
             <a href="tel:+212672978539">+212 672 978 539</a>
             <a href="mailto:info@ocevia.ma">info@ocevia.ma</a>
-            <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Taghazout, Agadir 80022<br />Morocco</span>
+            <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Taghazout, Agadir 80022<br />Morocco 🇲🇦</span>
           </div>
         </div>
         <div className="footer-bottom">
