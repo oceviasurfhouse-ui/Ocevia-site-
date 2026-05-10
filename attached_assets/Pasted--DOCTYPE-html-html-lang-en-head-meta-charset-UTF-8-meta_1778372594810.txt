@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCEVIA Surf House PRO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="https://js.stripe.com/v3/"></script>
+
+<style>
+body{margin:0;font-family:system-ui;background:#000;color:#fff}
+nav{position:fixed;top:0;width:100%;display:flex;justify-content:space-between;padding:15px;background:#0008;backdrop-filter:blur(10px)}
+.hero{height:100vh;display:flex;justify-content:center;align-items:center;text-align:center;background:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e') center/cover}
+.hero h1{font-size:50px}
+section{padding:80px 20px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;max-width:1000px;margin:auto}
+.card{background:#111;padding:20px;border-radius:15px}
+input,select{width:100%;padding:12px;margin:8px 0}
+button{padding:12px 20px;border:none;background:#1e90ff;color:#fff;border-radius:25px;cursor:pointer}
+.chat{position:fixed;bottom:80px;right:20px;width:280px;background:#111;display:none;flex-direction:column}
+.chat-body{height:200px;overflow:auto;padding:10px}
+.chat-header{background:#1e90ff;padding:10px}
+</style>
+</head>
+
+<body>
+
+<nav>
+<div>🌊 OCEVIA PRO</div>
+<div>Surf House</div>
+</nav>
+
+<div class="hero">
+<div>
+<h1>Surf Experience Morocco</h1>
+<p>Taghazout • Imsouan • Tamraghte</p>
+<button onclick="scrollToBook()">Book Now</button>
+<button onclick="payNow()">Pay Deposit</button>
+</div>
+</div>
+
+<section id="booking">
+<h2>Booking System</h2>
+
+<div class="card" style="max-width:400px;margin:auto">
+
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+
+<select id="room">
+<option>Surf Loft</option>
+<option>Ocean Suite</option>
+<option>Villa</option>
+</select>
+
+<input id="days" type="number" placeholder="Days">
+
+<button onclick="book()">Confirm Booking</button>
+
+<p id="result"></p>
+</div>
+</section>
+
+<section>
+<h2>Dashboard</h2>
+<div class="grid">
+<div class="card">
+<h3>Bookings</h3>
+<p id="count">0</p>
+</div>
+<div class="card">
+<h3>Revenue</h3>
+<p id="revenue">0€</p>
+</div>
+</div>
+</section>
+
+<!-- CHAT -->
+<div class="chat" id="chat">
+<div class="chat-header">OCEVIA AI</div>
+<div class="chat-body" id="chatBody"></div>
+<input id="msg" placeholder="Ask..." onkeydown="if(event.key==='Enter')sendMsg()">
+</div>
+
+<button onclick="toggleChat()" style="position:fixed;bottom:20px;right:20px">Chat</button>
+
+<script>
+
+/* SUPABASE */
+const supabase = supabase.createClient(
+"https://YOUR_PROJECT.supabase.co",
+"YOUR_KEY"
+);
+
+/* STRIPE */
+const stripe = Stripe("YOUR_STRIPE_PUBLIC_KEY");
+
+/* BOOKING */
+async function book(){
+
+let name = document.getElementById("name").value;
+let email = document.getElementById("email").value;
+let room = document.getElementById("room").value;
+let days = document.getElementById("days").value;
+
+if(!name||!email||!days) return alert("Fill all");
+
+let price = days * 90;
+
+const {error} = await supabase.from("bookings").insert([
+{name,email,room,days,price}
+]);
+
+if(!error){
+document.getElementById("result").innerText =
+"Booked ✔ Price: "+price+"€";
+
+sendEmail(name,email,room,days,price);
+loadDashboard();
+}
+}
+
+/* EMAIL API */
+function sendEmail(name,email,room,days,price){
+fetch("/api/email",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({name,email,room,days,price})
+});
+}
+
+/* DASHBOARD */
+async function loadDashboard(){
+const {data} = await supabase.from("bookings").select("*");
+if(data){
+let total=0;
+data.forEach(b=>total+=b.price);
+document.getElementById("count").innerText=data.length;
+document.getElementById("revenue").innerText=total+"€";
+}
+}
+loadDashboard();
+
+/* STRIPE */
+function payNow(){
+fetch("/api/checkout")
+.then(r=>r.json())
+.then(d=>window.location.href=d.url);
+}
+
+/* CHAT AI */
+async function sendMsg(){
+let msg=document.getElementById("msg").value;
+let box=document.getElementById("chatBody");
+
+box.innerHTML+=`<p>You: ${msg}</p>`;
+
+const res = await fetch("/api/chat",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({message:msg})
+});
+
+const data = await res.json();
+
+box.innerHTML+=`<p>AI: ${data.reply}</p>`;
+}
+
+function toggleChat(){
+let c=document.getElementById("chat");
+c.style.display=c.style.display==="flex"?"none":"flex";
+c.style.flexDirection="column";
+}
+
+function scrollToBook(){
+document.getElementById("booking").scrollIntoView({behavior:"smooth"});
+}
+
+</script>
+
+</body>
+</html>
